@@ -1,0 +1,259 @@
+#!/bin/bash
+# from Bud Brown for case 01469680
+#
+# grab-proc-sys.bsh /<temp-working-directory>
+#
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* All software provided below is unsupported and provided as-is, without warranty 
+#* of any kind.
+#*
+#* To the extent possible under law, Red Hat, Inc. has dedicated all copyright
+#* to this software to the public domain worldwide, pursuant to the CC0 Public
+#* Domain Dedication. This software is distributed without any warranty.
+#* See <http://creativecommons.org/publicdomain/zero/1.0/>.
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* Maintainer: bubrown@redhat.com
+#* Version   : "02.34-087-31032015"		/* Tue Mar 31 10:10:16 2015 bubrown */
+#*
+#*----------------------------------------------------------------------------------------
+#
+#
+#  01/20/2013 loberman  original
+#  02/01/2013 bubrown   change script slightly to auto-scan anything it finds with specific
+#                       exclusions rather than only scanning specific hard coded subdirs.
+#  06/18/2013 bubrown   /proc/acpi hangs on some systems at /proc/acpi/event, really only 
+#                       want /proc/acpi/processor atm so tweak /proc/acpi to /proc/acpi/processor 
+#		        special case
+#  09/12/2013 bubrown   fixed uname -a into info.log, was being overwritten by date due to > vs >>
+#  04/08/2014 bubrown   updated version format/header, added message about /proc/acpi being
+#                       exception
+#  06/27/2014 bubrown   blacklist /proc/net/rpc per BZ 1079954 et.al.
+#  06/27/2014 bubrown   blacklist /proc/net/cdp, non-Red Hat entry can stream unlimited amount
+#                       of data.
+#  03/31/2014 bubrown   add optional capture of multipath data, as checking eh tuning can require
+#                       this information. This extra data is dumped into root of gathered ./sys
+#  04/17/2015 bubrown   instructions always say to run as root so doesn't get permission denied 
+#                       during ls and other commands such as at cleanup time.
+#  04/15/2015 jjd       Issue msg if not running as root.
+#                       Rename OLOG to ELOG (used to hold stdErr output).
+#                       Ensure $ELOG exists prior to any append operations. 
+#
+err=0
+if [ "$1" == "" ]
+then
+echo " "
+echo "missing arguments:"
+echo "------------------"
+echo "arg1  = temporary staging directory for procfs and sysfs info, e.g. /tmp"
+echo " "
+err=$(( $err + 1 ))
+fi
+if [ $UID != 0 ]
+then
+    echo "Must be root to have access to device special files for open access."
+    err=$(( $err +  1 ));
+fi
+if [ $err -ne 0 ]
+then
+    exit 1
+fi
+_VERSION="02.34-093-17042015"
+#
+ODIR=$1
+#
+_TIME=$(date +%Y%m%d-%H%M%S)
+PREFIX=$(hostname)_
+#
+#
+# ==========================================================
+SUFFIX=.proc.fs.tgz
+OFILE=$PREFIX$_TIME$SUFFIX
+PROCTMP=$ODIR/proc
+ELOG=$PROCTMP/_scan_error.log
+# ==========================================================
+echo "  scan /proc/* ...                      (to $SUFFIX) "
+echo "-----------------------------------------------------"
+>$OFILE
+[[ -d $PROCTMP ]] && rm -rf $PROCTMP    # ensure starting with empty directory
+mkdir -p $PROCTMP
+echo  -n ""      >   $PROCTMP/_scan_error.log
+uname -a         >   $PROCTMP/_scan_info.log
+date            >>   $PROCTMP/_scan_info.log
+uptime          >>   $PROCTMP/_scan_info.log
+echo v$_VERSION >>   $PROCTMP/_scan_info.log
+echo "==================================="   >> $PROCTMP/_scan_info.log
+ls -lR /proc >>  $PROCTMP/_scan_info.log    2>> $PROCTMP/_scan_error.log
+echo "==================================="   >> $PROCTMP/_scan_info.log
+stash_procfs_entry () {
+	echo "cp "$1" -> "$PROCTMP           >> $PROCTMP/_scan_info.log
+	echo "- - - - - - - - - - - - - "    >> $PROCTMP/_scan_info.log
+	ls -l $1                             >> $PROCTMP/_scan_info.log
+        if [[ -d $1 ]]; then
+                cp -rpv $1 $PROCTMP 2>>$ELOG >> $PROCTMP/_scan_info.log
+        elif [[ -f $1 ]]; then
+                cp -pv $1 $PROCTMP 2>>$ELOG  >> $PROCTMP/_scan_info.log
+        fi
+        echo -n "."                          >> $PROCTMP/_scan_info.log
+}
+ls -1c /proc >> $PROCTMP/_scan_info.log     2>> $PROCTMP/_scan_error.log
+echo "==================================="   >> $PROCTMP/_scan_info.log
+#
+# Exclusions:
+#    . any pid (number) files like /sys/2994
+#    . /proc/kmsg (fifo, can "hang" on trying to copy)
+#
+FILES=/proc/*
+for f in $FILES
+do
+  if expr ${f:6:10} : '-\?[0-9]\+$' >/dev/null
+  then
+     echo "file       $f is exception, skipping..."
+  elif [[ $f = "/proc/kmsg"     ]]
+  then
+     echo "file       $f is exception, skipping..."
+  elif [[ $f == "/proc/kcore"   ]]
+  then
+     echo "file       $f is exception, skipping..."
+  elif [[ $f == "/proc/net"     ]]
+  then
+	SUBFILES=$f/*
+        for f in $SUBFILES
+        do
+	    if   [[ $f == "/proc/net/rpc" ]]
+	    then
+                echo "file       $f is exception, skipping..."
+            elif [[ $f == "/proc/net/cdp" ]]
+            then
+                echo "file       $f is exception, skipping..."
+	    else
+     		echo "processing $f..."
+     		stash_procfs_entry $f
+	    fi
+	done
+  elif [[ $f == "/proc/acpi"    ]]
+  then
+     echo "file       $f is exception, skipping except for..."
+     echo "processing $f/processor..."
+     mkdir $PROCTMP/acpi
+     cp -rpv $f/processor $PROCTMP/acpi/processor 2>>$ELOG >> $PROCTMP/_scan_info.log
+  else
+     echo "processing $f..."
+     stash_procfs_entry $f
+  fi
+done
+echo "tar results..."
+(cd $ODIR; tar cf - proc 2>>$ELOG)      | gzip -c9 >$OFILE
+echo "cleanup "$PROCTMP"..."
+rm -rf $PROCTMP
+#
+# ==========================================================
+SUFFIX=.sys.fs.tgz
+OFILE=$PREFIX$_TIME$SUFFIX
+SYSTMP=$ODIR/sys
+ELOG=$SYSTMP/_scan_error.log
+# ==========================================================
+echo    " "
+echo "  scan /sys/* ...                       (to $SUFFIX) "
+echo "-----------------------------------------------------"
+>$OFILE
+[[ -d $SYSTMP ]] && rm -rf $SYSTMP    # ensure starting with empty directory
+mkdir -p $SYSTMP
+echo  -n ""      >  $SYSTMP/_scan_error.log
+uname -a         >  $SYSTMP/_scan_info.log
+date            >>  $SYSTMP/_scan_info.log
+uptime          >>  $SYSTMP/_scan_info.log
+echo v$_VERSION >>  $SYSTMP/_scan_info.log
+if [ "$2" == 1 ]
+then
+    echo "processing /sys/_multipath..."
+    if [ -e /sbin/multipath ]
+    then
+        /sbin/multipath -ll -v4          &> $SYSTMP/_multipath-ll-v4.log
+    fi
+    if [ -e /sbin/multipathd ]
+    then
+	if ps ax | grep multipathd | grep -v grep > /dev/null
+	then
+            /sbin/multipathd -k"show config" &> $SYSTMP/_multipathd-show-config.log
+	else
+	    echo "multipathd service not running" > $SYSTMP/_multipathd-show-config.log
+	fi
+    fi
+    if [ -e /etc/multipath.conf ]
+    then	
+	cp /etc/multipath.conf       $SYSTMP/_multipath-conf.log
+    else
+	echo "/etc/multipath.conf does not exist" > $SYSTMP/_multipath-conf.log
+    fi
+    if [ -e /etc/multipath/bindings ]
+    then	
+	cp /etc/multipath/bindings   $SYSTMP/_multipath_bindings.log
+    else
+	echo "/etc/multipath/bindings does not exist" > $SYSTMP/_multipath_bindings.log
+    fi
+    if [ -e /etc/multipath/wwids ]
+    then	
+	cp /etc/multipath/wwids      $SYSTMP/_multipath_wwids.log
+    else
+	echo "/etc/multipath/wwids does not exist" > $SYSTMP/_multipath_wwids.log
+    fi
+fi
+echo "==================================="  >> $SYSTMP/_scan_info.log
+ls -lR /sys  >>  $SYSTMP/_scan_info.log    2>> $SYSTMP/_scan_error.log
+echo "==================================="  >> $SYSTMP/_scan_info.log
+#
+#
+# Exclusions:
+#    . /sys/kernel has /sys/kernel/debug which includes usbmon debug files
+#    which if you try and copy may hang waiting for events to be logged,
+#    so skip as a recursive copy and only file copy contents.  This means
+#    /sys/kernel/debug and /sys/kernel/security file trees are skipped.
+#
+stash_sysfs_entry () {
+	echo "cp "$1" -> "$SYSTMP           >> $SYSTMP/_scan_info.log
+	echo "- - - - - - - - - - - - - "   >> $SYSTMP/_scan_info.log
+	ls -l $1                            >> $SYSTMP/_scan_info.log
+	if [[ $1 = "/sys/kernel" ]] ; then
+	        cp -pv  $1 $SYSTMP 2>>$ELOG >> $SYSTMP/_scan_info.log
+	elif [[ -d $1 ]]; then
+                cp -rpv $1 $SYSTMP 2>>$ELOG >> $SYSTMP/_scan_info.log
+        elif [[ -f $1 ]]; then
+                cp -pv  $1 $SYSTMP 2>>$ELOG >> $SYSTMP/_scan_info.log
+        fi
+        echo -n "."                         >> $SYSTMP/_scan_info.log
+}
+ls -1c /sys >> $SYSTMP/_scan_info.log      2>> $SYSTMP/_scan_error.log
+echo "==================================="  >> $SYSTMP/_scan_info.log
+FILES=/sys/*
+for f in $FILES
+do
+  if expr ${f:6:10} : '-\?[0-9]\+$' >/dev/null
+  then
+     echo "file          $f is exception, skipping..."
+  else
+     if [[ $f = "/sys/power" ]]
+     then
+	echo "file       $f is exception, skipping..."
+     else
+	echo "processing $f..."
+        stash_sysfs_entry $f
+     fi
+  fi
+done
+echo "tar results..."
+(cd $ODIR; tar cf - sys 2>>$ELOG)      | gzip -c9 >$OFILE
+echo "cleanup "$SYSTMP"..."
+rm -rf $SYSTMP
+#
+echo " "
+echo "------------------------------------------------------------"
+echo "Results (upload/post to case):"
+echo "------------------------------------------------------------"
+ls -lhtr $PREFIX$_TIME*
+echo "------------------------------------------------------------"
+echo " "
+exit

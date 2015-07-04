@@ -1,0 +1,218 @@
+#!/bin/bash
+# from Bud Brown for case 01469680
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* All software provided below is unsupported and provided as-is, without warranty 
+#* of any kind.
+#*
+#* To the extent possible under law, Red Hat, Inc. has dedicated all copyright
+#* to this software to the public domain worldwide, pursuant to the CC0 Public
+#* Domain Dedication. This software is distributed without any warranty.
+#* See <http://creativecommons.org/publicdomain/zero/1.0/>.
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* Maintainer: bubrown@redhat.com
+#* Version   : "01.06-0075-18052015"		/* Mon May 18 13:29:58 2015 bubrown */
+#
+# probealldevs.bsh 
+#
+# Input arguments:
+#   <none>
+#
+# Outputs:
+#   redirect all output to log file for capture
+#
+# Pre-requisites:
+#   yum install sg3_utils    (required)
+#   yum install lsscsi       (optional, lsscsi command)
+#   yum install pciutils     (optional, lspci command)
+#
+# Description:
+#   Run ls of /dev
+#   optional: run multipath commands 
+#   optional: run lsscsi    command
+#   optional: run lspci     command
+#   run sg_inq (SCSI 12h INQUIRY), standard, page 0, 80, 83, B0, and B1
+#     0x00	Supported VPD pages
+#     0x80	Unit serial number
+#     0x83	Device identification
+#     0xB0	Block limits (sbc2)
+#     0xB1	Block device characteristics (sbc3)
+#   run sg_turs (SCSI 00h TEST UNIT READY)
+#   run sg_luns (SCSI A0h REPORT LUNS - mandatory if INQUIRY indicates device is SPC-3 or higher [3])
+#   run sg_readcap and readcap -16
+#               (SCSI 25h READ CAPACITY(10) - good for disks up to 2.19TB in size)
+#               (SCSI 9Eh/10h READ CAPACITY (16) - disks > 2.19TB in size [4])
+#   run sg_rtpg (SCSI A3h/0Ah REPORT TARGET PORT GROUPS [5])
+#   run sg_modes (SCSI 1Ah MODE SENSE [6])
+#
+# Notes      :
+#   1. must be run as root or priv'd so can open /dev devices
+#   2. The above sg commands mimic the common SCSI command run at device
+#      discovery time.
+#   3. # sg_inq /dev/sda
+#      standard INQUIRY:
+#      PQual=0  Device_type=0  RMB=0  version=0x05  [SPC-3]
+#                                     ^^^^^^^^^^^^^^^^^^^^^
+#   4. READ CAPACITY (16) is built using 9Eh SERVICE ACTION IN, with service
+#      action set to 10h.  READ CAP(16) also provides logical and physical 
+#      block sizes (for example: 512/512, 512E:512/4096, 4kN:4096/4096).
+#   5. REPORT TARGET PORT GROUPS is build using A3h MAINTENANCE IN command,
+#      with service action set to 0Ah.  While INQUIRY page 3 provides which 
+#      relative port group the device belongs to, the RTPG data defines the
+#      attributes of the port group.  Typically used for ALUA support.
+#   6. MODE SENSE page 8 defines the read and write caching in use by the 
+#      device.
+#    
+# History    :
+#  04.17.2015 + removed --maxlen=128 on sg_modes as that option is not available on RHEL5
+#
+#
+if [ "$1" == "" ]
+then
+    err=0
+    if [ ! -e /usr/bin/sg_inq     ] ; then err=$(( $err + 1 )); fi
+    if [ ! -e /usr/bin/sg_turs    ] ; then err=$(( $err + 1 )); fi
+    if [ ! -e /usr/bin/sg_luns    ] ; then err=$(( $err + 1 )); fi
+    if [ ! -e /usr/bin/sg_rtpg    ] ; then err=$(( $err + 1 )); fi
+    if [ ! -e /usr/bin/sg_modes   ] ; then err=$(( $err + 1 )); fi
+    if [ ! -e /usr/bin/sg_readcap ] ; then err=$(( $err + 1 )); fi
+    if [ $err -ne 0 ]
+    then
+        echo " $err missing /usr/bin/sg_* utilities, yum install sg3_utils package required"
+    fi
+    if [ $UID != 0 ]
+    then
+        echo "Must be root to have access to device special files for open access."
+        err=$(( $err +  1 ))
+    fi
+    if [ $err -ne 0 ]
+    then
+	exit 1
+    fi
+    _time=$(date +%Y%m%d-%H%M%S)
+#    ./probealldevs.bsh STARTUP &> probealldevs-${_time}.log
+    $0 STARTUP &> probealldevs-${_time}.log
+    echo "------------------------------------------------------------"
+    echo "Results (upload/post to case):"
+    echo "------------------------------------------------------------"
+    ls -lh probealldevs-${_time}.log
+    echo "------------------------------------------------------------"
+    exit
+fi
+#
+if [ "$1" == "STARTUP" ]
+then
+    _uname=`uname -a`
+    _release=`echo $_uname | cut -d' ' -f 3`
+    _stream=`echo $_release| cut -d'.' -f 1`
+    _major=`echo $_release | cut -d'.' -f 3`
+    _major=`echo $_major   | cut -d'-' -f 1`
+    _minor=`echo $_release | cut -d'-' -f 2`
+    _minor=`echo $_minor   | cut -d'.' -f 1`
+    echo "date : $( date )"			
+    echo "uname: $_uname"
+    echo "$_stream $_major $_minor"
+    if [ "$_stream" -eq "2" ] && [ "$_major" -eq "18" ]
+    then
+       echo "RHEL5"
+       echo "===scsi-devs================================================"
+       ls -l /sys/block/sd*/device/ | egrep "block|scsi_"
+       echo "---scsi"
+       ls -l /sys/block/sd*/device/ | grep scsi_
+       echo "---sg"
+       ls -l /sys/class/scsi_generic/sg*/device
+    elif [ "$_major" -eq "32" ] || [ "$_major" -eq "10" ]
+    then
+       echo "RHEL6/7"
+       echo "===scsi-devs================================================"
+       find  /sys/block/sd*/device/scsi_disk    -name "*:*:*:*"
+       echo "---sg"
+       find  /sys/block/sd*/device/scsi_generic -name "sg*"
+       echo "---scsi"
+       ls -l /sys/class/scsi_*
+    fi
+    echo "===ls-dev==================================================="
+    ls -lR /dev
+    if [ -e /sbin/multipath ] 
+    then
+       echo "===multipath================================================"
+        multipath -ll -v4 
+        multipathd -k"show config" 
+    fi
+    if [ -e /usr/bin/lsscsi ]
+    then
+       echo "===lsscsi==================================================="
+       lsscsi -H
+       lsscsi -g
+    fi
+    if [ -e /sbin/lspci     ]
+    then
+       echo "===lspci===================================================="
+       lspci
+       lspci -vvvkn
+    fi
+    echo " "
+    echo "============================================================"
+    echo "===probe-sdX================================================"
+    echo "============================================================"
+    ls -1c /dev/sd*[!0-9] | sort | xargs -I {} $0 {}
+    echo "============================================================"
+    echo "===probe-sgN================================================"
+    echo "============================================================"
+    ls -1c /dev/sg*       | sort | xargs -I {} $0 {}
+#   ls -1c /dev/st[0-9*]  | sort | xargs -I {} udev -q all -n {}
+    exit
+fi
+#
+echo " "
+echo "Device: $1"
+echo "============================================================"
+echo "inquiry: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_inq  -vv $1
+echo "----PG00"
+/usr/bin/sg_inq  -vv -p 0x00 $1
+echo "----PG80"
+/usr/bin/sg_inq  -vv -p 0x80 $1
+echo "----PG83"
+/usr/bin/sg_inq  -vv -p 0x83 $1
+echo "----PGB0"
+/usr/bin/sg_inq  -vv -p 0xB0 $1
+echo "----PGB1"
+/usr/bin/sg_inq  -vv -p 0xB1 $1
+echo "------------------------------------------------------------"
+echo "tur: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_turs -vvv $1
+/usr/bin/sg_turs -vvv $1
+/usr/bin/sg_turs -vvv $1
+echo "------------------------------------------------------------"
+echo "report luns: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_luns -vv        $1
+echo "----hex"
+/usr/bin/sg_luns -vv -H     $1
+echo "----decode"
+/usr/bin/sg_luns -vv -d     $1
+echo "------------------------------------------------------------"
+echo "read capacity: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_readcap -vv     $1
+echo "----(16)"
+/usr/bin/sg_readcap -vv -16 $1
+echo "------------------------------------------------------------"
+echo "read target port groups: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_rtpg -vv $1
+echo "------------------------------------------------------------"
+echo "mode sense: $1"
+echo "------------------------------------------------------------"
+/usr/bin/sg_modes    -e    $1
+/usr/bin/sg_modes -vv      $1
+echo "----PG08"
+/usr/bin/sg_modes -vv -6 -p 0x08 $1
+echo "============================================================"
+echo " "
