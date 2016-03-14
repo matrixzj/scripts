@@ -53,9 +53,9 @@ for block in {1,2,4,8,16,32,64,128}; do
 		mkdir -p $base_dir/${block}K/${threads}threads
 		i=0
 		while [ $i -lt 10 ]; do 
-			echo ===================================Test$i Start $(date +\%H\%d\%m)=================================== >> $base_dir/${block}K/${threads}threads/${test_type}
+			echo ===================================Test$i Start $(date +\%Y-\%m-\%d\ %T)=================================== >> $base_dir/${block}K/${threads}threads/${test_type}
 			TYPE=${test_type} THREADS=$threads BS=$block FILENAME="$target/test1-`hostname -s`:$target/test2-`hostname -s`" fio /root/iops.fio >> $base_dir/${block}K/${threads}threads/${test_type}
-			echo ===================================Test$i Stop $(date +\%H\%d\%m)=================================== >> $base_dir/${block}K/${threads}threads/${test_type}
+			echo ===================================Test$i Stop $(date +\%Y-\%m-\%d\ %T)=================================== >> $base_dir/${block}K/${threads}threads/${test_type}
 			let i=$i+1;
 		done
 		unset i

@@ -46,8 +46,8 @@ echo `hostname` > $result/hostname
 
 i=1
 while [ $i -le 10 ]; do 
-	echo ===================================Test$i Starti $(date +\%H\%d\%m)=================================== >> $result/$test_type
+	echo ===================================Test$i Start $(date +\%Y-\%m-\%d\ %T)=================================== >> $result/$test_type
 	TYPE=$test_type FILENAME="$target/test1-`hostname -s`:$target/test2-`hostname -s`" fio throughout.fio >> $result/$test_type
-	echo ===================================Test$i Stop $(date +\%H\%d\%m)=================================== >> $result/$test_type
+	echo ===================================Test$i Stop $(date +\%Y-\%m-\%d\ %T)=================================== >> $result/$test_type
 	let i=$i+1;
 done
