@@ -1,0 +1,21 @@
+[global]
+	bs=1M
+	ioengine=libaio
+	size=10G
+	direct=1
+	randrepeat=0
+	rw=${TYPE}
+	randrepeat=0
+	refill_buffers=1
+	end_fsync=1
+	iodepth=200
+	iodepth_batch=100
+	iodepth_low=150
+	runtime=600
+	exitall=1
+	size=10G
+
+[throughout]
+	filename=${FILENAME}
+	nrfiles=2
+	numjobs=1

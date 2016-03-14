@@ -1,0 +1,20 @@
+[global]
+	bs=${BS}K
+	ioengine=libaio
+	size=10G
+	direct=1
+	randrepeat=0
+	rw=${TYPE}
+	invalidate=1
+	verify=0
+	verify_fatal=0
+	iodepth=200
+	iodepth_batch=100
+	iodepth_low=150
+	runtime=120
+	exitall=1
+
+[iops]
+	filename=${FILENAME}
+	nrfiles=2
+	numjobs=${THREADS}
