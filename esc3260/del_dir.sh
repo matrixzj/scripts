@@ -33,7 +33,6 @@ while true; do {
 	rt=$?
 	if [ $rt -eq 0 ]; then
 	{	
-		echo flos
 		missing_time=$(date +%s.%N)
 		printf "Existed: %s\n" "$(date +%Y-%m-%d\ %H:%M:%S.%N)" 
 		printf "cmd: ls -al .\n" 
@@ -48,7 +47,6 @@ while true; do {
 	}
 	else
 	{
-		echo matrix
 		cur_time=$(date +%s.%N)
 		duration=`getTiming $missing_time $cur_time`
 		echo $duration
@@ -56,9 +54,6 @@ while true; do {
 			printf "Error: %s\t" "$(date +%Y-%m-%d\ %H:%M:%S.%N)" 
 			echo 'ls -al .' 
 			ls -al .  
-			echo "issue has been reproduced at `hostname -s`" | mail -s 'Hurry Up' jzou@freewheel.tv;
-			ssh 192.168.10.241 'killall tcpdump'
-			ssh 192.168.10.241 'killall mk_dir.sh'
 			kill $pid;
 			break 1;
 		fi
