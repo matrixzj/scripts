@@ -10,7 +10,7 @@
         iodepth=200
         iodepth_batch=100
         iodepth_low=150
-        runtime=120
+        runtime=2400
         exitall=1
 
 [rand]
