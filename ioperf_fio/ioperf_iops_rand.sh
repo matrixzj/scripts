@@ -1,7 +1,7 @@
 #! /bin/bash
 # From Matrix Zou for NFS/GlusterFS Benchmark (randwrite/randread)
 # Maintainer    : jzou@freewheel.tv
-# Version       : "0.1-20160314"
+# Version       : "0.2-20160405"
 #
 # $1 = IO performace Benchmark IO Pattern (randrw, randread, randwrite)
 # $2 = Filesytems/mount point will be tested with
@@ -10,6 +10,7 @@
 # crontab -u root -e
 # 21 * * * * bash  /<path>/ioperf_iops_rand.sh randwrite /mnt/gluster /tmp/gluster-randwrite
 #
+#  04/05/2016 Matrix Zou	update file numbers tested with
 
 if [ "$3" == "" ] ; then
         echo " "
@@ -51,18 +52,17 @@ for i in `seq 0 99`; do
         if [ ! -d ${target}/${hostname}/$i ]; then
                 mkdir ${target}/${hostname}/$i
         fi
- done
+done
 
 mkdir -p $base_dir/4K
 for threads in {32,64,100}; do
 {
         mkdir -p $base_dir/4K/${threads}threads
+        nr=$((1000/$threads))
         echo ===================================Test Start $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
-        TYPE=${test_type} THREADS=$threads FORMAT="${target}/${hostname}/\$jobnum/\$filenum" fio /root/randiops.fio >> $base_dir/4K/${threads}threads/${test_type}
+        TYPE=${test_type} THREADS=$threads NRFILES=$nr FORMAT="${target}/${hostname}/\$jobnum/\$filenum" fio /root/randiops.fio >> $base_dir/4K/${threads}threads/${test_type}
         echo ===================================Test Stop $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
 }
 done
 
 echo `hostname -s` done
-
-
