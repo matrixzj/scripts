@@ -3,6 +3,7 @@
         ioengine=libaio
         direct=1
         randrepeat=0
+	size=10G
         rw=${TYPE}
         invalidate=1
         verify=0
@@ -15,6 +16,5 @@
 
 [rand]
         filename=${FILENAME}
-        filesize=5G
         nrfiles=${NRFILES}
         numjobs=${THREADS}
