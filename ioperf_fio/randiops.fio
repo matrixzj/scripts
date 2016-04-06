@@ -15,6 +15,6 @@
 
 [rand]
         filename_format=${FORMAT}
-        filesize=10M
+        filesize=100M
         nrfiles=${NRFILES}
         numjobs=${THREADS}
