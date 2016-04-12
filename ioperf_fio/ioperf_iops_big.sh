@@ -46,31 +46,12 @@ rm -rf $base_dir
 mkdir -p $base_dir
 echo `hostname` > $base_dir/hostname
 
-hostname=`hostname -s`
-mkdir ${target}/${hostname} > /dev/null 2>&1
-for i in `seq 0 99`; do
-        if [ ! -d ${target}/${hostname}/$i ]; then
-                mkdir ${target}/${hostname}/$i
-        fi
-done
-
 mkdir -p $base_dir/4K
-#for threads in {32,64,100}; do
-#{
-#        mkdir -p $base_dir/4K/${threads}threads
-#        nr=$((1000/$threads))
-#        echo ===================================Test Start $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
-#        TYPE=${test_type} THREADS=$threads NRFILES=$nr FORMAT="${target}/${hostname}/\$jobnum/\$filenum" fio /root/randiops.fio >> $base_dir/4K/${threads}threads/${test_type}
-#        echo ===================================Test Stop $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
-#}
-#done
-
 threads=32
 mkdir -p $base_dir/4K/${threads}threads
-nr=3
+nr=2
 echo ===================================Test Start $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
-TYPE=${test_type} THREADS=$threads NRFILES=$nr FORMAT="${target}/${hostname}/\$jobnum/\$filenum" fio /root/randiops.fio >> $base_dir/4K/${threads}threads/${test_type}
+TYPE=${test_type} THREADS=$threads NRFILES=$nr FILENAME="$target/test1-`hostname -s`:$target/test2-`hostname -s`" fio /root/randiops_big.fio >> $base_dir/4K/${threads}threads/${test_type}
 echo ===================================Test Stop $(date +\%H\%d\%m)=================================== >> $base_dir/4K/${threads}threads/${test_type}
-
 
 echo `hostname -s` done
