@@ -14,7 +14,7 @@ sed -i '/^enabled/s/1/0/' /etc/yum/pluginconf.d/versionlock.conf
 yum --showduplicates list available --disablerepo="*" --enablerepo=${channel} | tail -n +4 > /tmp/${channel}.raw-list
 
 sed -i ':a;/'${channel}'$/!{N;s/\n//;ba}' /tmp/${channel}.raw-list
-sed -i 's/[0-9]://' /tmp/${channel}.raw-list
+sed -i 's/[0-9]\{1,2\}://' /tmp/${channel}.raw-list
 
 awk '{print$1}' /tmp/${channel}.raw-list | awk -F. 'BEGIN{OFS="."}{NF-=1;print}'| awk '{print NR,$0}' > /tmp/${channel}.name-list
 awk  '{print NR,$1}' /tmp/${channel}.raw-list | awk -F. '{print NR,$NF}' > /tmp/${channel}.arch-list
