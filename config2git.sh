@@ -15,19 +15,53 @@ die_msg() { echo ERROR: $@>&2; exit -1; }
 
 cd $1 &>/dev/null || die_msg $0 cannot switch to working directory $1
 
-git status | grep 'nothing to commit, working directory clean' > /dev/null 2>&1
-
-rt=$?
-
 project=`git remote -v | head -n1 | awk '{print $2}' | sed 's/.*\///' | sed 's/\.git//'`
 
-if [ $rt != 0 ]; then
-	find . -type f -mmin -120 -and -not -path "./.git/*"  > /tmp/${project}_modifiled_filelist
-	for file in `cat /tmp/${project}_modifiled_filelist`; do git add $file; done
-	echo "Modified files found at "  $(date +\%Y-\%m-%d\ \%H:\%M:\%S) > /tmp/${project}_commit_comment
-	for list in `cat /tmp/${project}_modifiled_filelist`; do ls -l $list >> /tmp/${project}_commit_comment; done
+modified_files() {
+	modified_numbers=`git status -s | grep '^\s*M' | awk '{print $2}' | wc -l`
+	if [ $modified_numbers == 0 ]; then
+		echo "No files have been modified. " >> /tmp/${project}_commit_comment
+		return 0
+	else 
+		echo "There are $modified_numbers files have been modified at $(date +\%Y-\%m-%d\ \%H:\%M:\%S). " >> /tmp/${project}_commit_comment
+		git status -s | grep '^\s*M' | awk '{print $2}'  > /tmp/${project}_modifiled_filelist
+		for file in `cat /tmp/${project}_modifiled_filelist`; do printf "\t%s\n" "$(ls -l $file)" >> /tmp/${project}_commit_comment; git add $file; done
+	fi
+}
+
+add_files() {
+        add_numbers=`git status -s | grep '^??' | awk '{print $2}' | wc -l`
+        if [ $add_numbers == 0 ]; then
+                echo "No files have been added. " >> /tmp/${project}_commit_comment
+		return 0
+        else
+                echo "There are $add_numbers files have been added at $(date +\%Y-\%m-%d\ \%H:\%M:\%S). " >> /tmp/${project}_commit_comment
+        	git status -s | grep '^??' | awk '{print $2}'  > /tmp/${project}_add_filelist
+        	for file in `cat /tmp/${project}_add_filelist`; do printf "\t%s\n" "$(ls -l $file)" >> /tmp/${project}_commit_comment; git add $file; done
+        fi
+}
+
+del_files() {
+        del_numbers=`git status -s | grep '^\s*D' | awk '{print $2}' | wc -l`
+        if [ $del_numbers == 0 ]; then
+                echo "No files have been deleted. " >> /tmp/${project}_commit_comment
+		return 0
+        else
+                echo "There are $del_numbers files have been deleted at $(date +\%Y-\%m-%d\ \%H:\%M:\%S). " >> /tmp/${project}_commit_comment
+                git status -s | grep '^\s*D' | awk '{print $2}'  > /tmp/${project}_del_filelist
+                for file in `cat /tmp/${project}_del_filelist`; do printf "\t%s\n" "$file" >> /tmp/${project}_commit_comment; git rm $file; done
+        fi
+}
+
+lines=`git status -s | wc -l` 
+
+if [ $lines != 0 ]; then
+	modified_files
+	add_files
+	del_files
 	git commit -F /tmp/${project}_commit_comment
 	git push || die_msg $0 git commit failed
+	rm -f /tmp/${project}_*
 else
 	exit 0 
 fi
