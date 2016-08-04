@@ -1,7 +1,11 @@
 #! /bin/bash
 # From Matrix Zou for keep submit a directory to Git
 # Maintainer    : Matrix Zou<jzou@freewheel.tv>
-# Version       : "0.1-20160603"
+# Version       : "0.2-20160804"
+# 
+# ChangeLog	: 
+# 	"0.2-20160804" -- add / del files tracked
+# 	"0.1-20160603" -- Initial script
 #
 # $1 = Directory
 #
