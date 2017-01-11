@@ -71,7 +71,7 @@ function download() {
 function check_download() {
 	local part=$1
 	local pid=$(cat ${_temp}/${channel}.rpmlist.${part}.pid)
-	/bin/ps aux | egrep "\s${pid}\s" | grep -v grep > /dev/null 2>&1
+	/bin/ps ax -o pid | egrep "^${pid}$" > /dev/null 2>&1
 	local rt=$?
 	if [ ${rt} -eq 0 ]; then
 		echo 1 > ${_temp}/part${part}.download_result
