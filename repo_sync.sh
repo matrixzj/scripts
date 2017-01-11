@@ -71,7 +71,7 @@ function download() {
 function check_download() {
 	local part=$1
 	local pid=$(cat ${_temp}/${channel}.rpmlist.${part}.pid)
-	/bin/ps aux | grep ${pid} | grep -v grep > /dev/null 2>&1
+	/bin/ps aux | egrep "\s${pid}\s" | grep -v grep > /dev/null 2>&1
 	local rt=$?
 	if [ ${rt} -eq 0 ]; then
 		echo 1 > ${_temp}/part${part}.download_result
@@ -93,9 +93,6 @@ function check_result() {
 	fi 
 	unset part
 }
-
-# rm -f ${_temp}/${channel}.* 
-# sed -i '/^enabled/s/0/1/' /etc/yum/pluginconf.d/versionlock.conf
 
 function init() {
 	if [ $# -lt 6 ]; then
@@ -122,6 +119,7 @@ function init() {
 }
 
 init $@
+sed -i '/^enabled/s/0/1/' /etc/yum/pluginconf.d/versionlock.conf
 generate_rpmlist
 split ${threads}
 
@@ -156,4 +154,5 @@ while [ ${failed} -gt 0 ]; do
 	grep 1 ${_temp}/part*.check_result | awk -F':' '{print $1}' | sed -e 's/.*part\(.*\).check_result/\1/'> ${_temp}/download_list
 done
 
+sed -i '/^enabled/s/1/0/' /etc/yum/pluginconf.d/versionlock.conf
 rm -rf ${_temp}
