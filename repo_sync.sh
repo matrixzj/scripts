@@ -23,9 +23,10 @@ END
 
 function generate_rpmlist() {
 	# disable yum plugin versionlock
-	sudo sed -i '/^enabled/s/1/0/' /etc/yum/pluginconf.d/versionlock.conf 
+	sed -i '/^enabled/s/1/0/' /etc/yum/pluginconf.d/versionlock.conf 
 
 	# generate rpm list need to be downloaded
+	yum clean all
 	yum --showduplicates list available --disablerepo="*" --enablerepo=${channel} | tail -n +3 > ${_temp}/${channel}.raw-list
 	sed -i ':a;/'${channel}'$/!{N;s/\n//;ba}' ${_temp}/${channel}.raw-list
 	sed -i 's/[0-9]\{1,2\}://' ${_temp}/${channel}.raw-list
@@ -63,7 +64,8 @@ function split() {
 function download() {
 	part=$1
 	echo ${BASHPID} > ${_temp}/${channel}.rpmlist.${part}.pid
-	for line in $(cat ${_temp}/${channel}.rpmlist.${part}); do yumdownloader --destdir=${dst_dir} ${line}; done > ${_temp}/${channel}.result.${part}
+	# once failed, reslt file need to checked
+	for line in $(cat ${_temp}/${channel}.rpmlist.${part}); do yumdownloader --disablerepo="*" --enablerepo=${channel} --destdir=${dst_dir} ${line}; done > ${_temp}/${channel}.result.${part}
 	unset line
 	unset part
 }
@@ -142,6 +144,7 @@ while [ ${failed} -gt 0 ]; do
 		done
 		unset i
 		finished=$(cat ${_temp}/part*.download_result | grep 1 | wc -l)
+		sleep 30
 	done
 	unset finished
 
