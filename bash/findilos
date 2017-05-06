@@ -100,7 +100,7 @@ iprange=$1
 
 printf "Scanning..."
 
-nmap -n -P0 -sS -p 17988 -oG - $iprange | fgrep /open/ | awk '{print $2}' > $iloips
+sudo nmap -n -P0 -sS -p 17988 -oG - $iprange | fgrep /open/ | awk '{print $2}' > $iloips
 
 printf "\n\n"
 
