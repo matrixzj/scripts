@@ -1,0 +1,135 @@
+#!/bin/bash
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* All software provided below is unsupported and provided as-is, without warranty 
+#* of any kind.
+#*
+#* To the extent possible under law, Red Hat, Inc. has dedicated all copyright
+#* to this software to the public domain worldwide, pursuant to the CC0 Public
+#* Domain Dedication. This software is distributed without any warranty.
+#* See <http://creativecommons.org/publicdomain/zero/1.0/>.
+#*
+#*----------------------------------------------------------------------------------------
+#*
+#* Maintainer: bubrown@redhat.com
+#
+# watcher-cron.bsh V02.801
+#
+# $1 = interval
+# $2 = interations
+# $3 = log directory
+# $4 = days of logs to keep
+# $5 = compression level (optional)
+#      0 - no compression           (previous default)
+#      1 - end-of-batch compression (new default, about a 10:1 compression ratio observed)
+#      2 - '1' + use gzip, if available, inline with top output creation
+#      3 - '2' + use gzip all commands except vmstat
+#
+# crontab -u root -e
+# 21 * * * * bash  /<path>/watcher-cron.bsh 30 120 /<logdir>  2  1
+#
+# collect numa node memory info and process info for case 01433013 debugging
+if [ "$4" == "" ]
+then
+echo " "
+echo "missing arguments:"
+echo "------------------"
+echo " arg1 = interval,    e.g. 1             (in seconds)"
+echo " arg2 = interations, e.g. 720           (count of samples to take)"
+echo "                                        (from cron arg1 x arg2 = 3600 seconds, 1hr)"
+echo " arg3 = log path,    e.g. /tmp/watcher  (where to create log files)"
+echo " arg4 = days,        e.g. 2             (anything older than this is purged from log path)"
+echo "------------------"
+echo " "
+exit
+fi
+# -p is exclusive of -x on RHEL5*
+# -p is required along with -x on RHEL6* to get partitions included
+# -p is required along with -x on RHEL7* to get partitions included
+_pflg=""
+if [[ `uname -a` == *2.6.32* || `uname -a` == *3.10.0* ]]
+then
+ _pflg="-p"
+fi
+_compress_hourly=1
+_compress_top=""
+_compress_all=""
+_ext_top=""
+_ext_all=""
+if [ "$5" != "" ]
+then
+  if [ $5 -eq 0 ]
+  then
+     _compress_hourly=0
+  fi
+  if [ -e "/usr/bin/gzip" ]
+  then
+    if [ $5 -ge 2 ]
+    then
+      _compress_top=" | gzip - "
+      _ext_top=".gz"
+    fi
+    if [ $5 -ge 3 ]
+    then
+      _compress_all=" | gzip - "
+      _ext_all=".gz"
+     fi
+  fi
+fi
+_wait_til_complete=0
+if [ $_compress_hourly -gt 0 ]
+then
+   _wait_til_complete=1
+fi
+_time=$(date +%Y%m%d-%H%M%S)
+_name=$(uname -a)
+#echo $1 seconds x $2 intervals, at ${_time}
+echo '#TIME=     '${_time}         >  $3/${_time}-info-vmstat.log
+echo '#INTERVAL= '$1               >> $3/${_time}-info-vmstat.log
+echo '#COUNT=    '$2               >> $3/${_time}-info-vmstat.log
+echo '#UNAME=   "'${_name}'"'      >> $3/${_time}-info-vmstat.log
+#
+echo '#TIME=     '${_time}         >  $3/${_time}-info-vmstat-d.log
+echo '#INTERVAL= '$1               >> $3/${_time}-info-vmstat-d.log
+echo '#COUNT=    '$2               >> $3/${_time}-info-vmstat-d.log
+echo '#UNAME=   "'${_name}'"'      >> $3/${_time}-info-vmstat-d.log
+#
+ eval "echo '#UNAME=   \"${_name}\"'      ${_compress_all} >  $3/${_time}-info-iostat.log${_ext_all}"
+#eval "iostat $1 $2 -t -k -x ${_pflg} -n  ${_compress_all} >> $3/${_time}-info-iostat.log${_ext_all} &"
+ eval "iostat $1 $2 -t -k -x ${_pflg}     ${_compress_all} >> $3/${_time}-info-iostat.log${_ext_all} &" ; iopid=$!
+       vmstat $1 $2                                        >> $3/${_time}-info-vmstat.log &               vmpid=$!
+       vmstat $1 $2 -d                                     >> $3/${_time}-info-vmstat-d.log &             vdpid=$!
+ eval "top  -b -d $1 -n $2                ${_compress_top} >  $3/${_time}-info-top.log${_ext_top} &"    ; tppid=$!
+ eval "mpstat $1 $2 -P ALL                ${_compress_all} >  $3/${_time}-info-mpstat.log${_ext_all} &" ; mppid=$!
+#at /sys/devices/system/node/node0/meminfo >> $3/${_time}-info-node0mem.log${_ext_all} 
+# eval "cat /sys/devices/system/node/node1/meminfo >>  $3/${_time}-info-node1mem.log${_ext_all} &"
+#
+
+i=0
+while [ $i -lt $2 ]; do
+	date >> $3/${_time}-info-iftopinfo.log${dd_ext_all} ;
+	sudo /usr/sbin/iftop -n -i bond0 -B -t -L10 -s $1  >> $3/${_time}-info-iftopstat.log${_ext_all} ;
+	let i=$i+1;
+	sleep $1;
+done
+unset i
+
+
+if [ $_wait_til_complete -gt 0 ]
+then
+  sleep $(( $1 * $2 ))
+fi
+find $3/*-info-*.log* -mtime +$4 -exec rm -f {} \;
+if [ $_compress_hourly -gt 0 ]
+then
+  while sleep 1; do ps -o pid= -p $iopid || break; done
+  while sleep 1; do ps -o pid= -p $vmpid || break; done
+  while sleep 1; do ps -o pid= -p $vdpid || break; done
+  while sleep 1; do ps -o pid= -p $tppid || break; done
+  while sleep 1; do ps -o pid= -p $mppid || break; done
+  ls -lh     $3/${_time}-info*.log*                    > $3/${_time}-info-files.log
+  ls -1c     $3 | grep ${_time}-info | grep log        > $3/${_time}-files.txt
+  tar -C $3 -T $3/${_time}-files.txt --remove-files -czf $3/${_time}-info.log.tar.gz
+  rm -f $3/${_time}-files.txt
+fi
