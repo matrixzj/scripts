@@ -6,7 +6,6 @@
 # ChangeLog     :
 #       "0.2-20160804" -- add / del files tracked
 #       "0.1-20160603" -- Initial script
-#
 # $1 = Directory
 #
 # crontab -u root -e
