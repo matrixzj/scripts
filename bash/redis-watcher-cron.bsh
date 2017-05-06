@@ -108,8 +108,8 @@ echo '#UNAME=   "'${_name}'"'      >> $3/${_time}-info-vmstat-d.log
 
 i=0
 while [ $i -lt $2 ]; do
-	date >> $3/${_time}-info-psinfo.log${dd_ext_all} ;
-	/usr/sbin/iftop -n -i eth0 -B -t -L5 -s $1  >> $3/${_time}-info-iftopstat.log${_ext_all} ;
+	date >> $3/${_time}-info-iftopinfo.log${dd_ext_all} ;
+	sudo /usr/sbin/iftop -n -i bond0 -B -t -L10 -s $1  >> $3/${_time}-info-iftopstat.log${_ext_all} ;
 	let i=$i+1;
 	sleep $1;
 done
