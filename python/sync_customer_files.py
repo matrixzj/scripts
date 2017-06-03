@@ -11,17 +11,13 @@ script, p_date = argv
 
 sender = 'root@nycnfs202.fwmrm.net'
 receivers = ['jzou@freewheel.tv']
-
 message_header = """From: From root <root@nycnfs202.fwmrm.net>
 To: To jzou <jzou@freewheel.tv>
 Subject: file syncing was finished
 """
 
-smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
-
 origin_dir = '/mnt/sftponlyha'
 target_dir = '/mnt/sftponly_netapp'
-
 
 today = datetime.date.today()
 # yesterday = datetime.date.fromordinal( today.toordinal() - 2 ).strftime("%F")
@@ -111,6 +107,7 @@ for network in network_list:
 
 message = message_header + p_date + ' files are finished at ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
 smtpObj.sendmail(sender, receivers, message)
 smtpObj.quit()
 print "Successfully sent email"
