@@ -3,12 +3,15 @@
 import os
 from os.path import join, getmtime
 
-basedir = '/mnt/sftponlyha'
+basedir = '/home/jzou/tmp'
+dest_base_dir = '/home/jzou/tmp1'
 
-all_sub = os.listdir(basedir)
+all_subs = os.listdir(basedir)
 
-for sublink in all_sub:
-	 if os.path.islink(os.path.join(basedir, sublink)):
-		realpath = os.path.realpath(os.path.join(basedir, sublink))
-		origpath = os.path.relpath(realpath, basedir)
-		print "%s   %s" % (sublink, realpath)
+for sub in all_subs:
+	 if os.path.islink( os.path.join(basedir, sub) ):
+		data_path = os.path.realpath( os.path.join(basedir, sub) )
+		rel_data_path = os.path.relpath( data_path, basedir )
+		print "%s\t\t%s" % ( rel_data_path, sub )
+		os.chdir(dest_base_dir)
+		os.symlink( rel_data_path, sub )
