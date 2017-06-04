@@ -18,10 +18,9 @@ Subject: file syncing was finished
 
 origin_dir = '/mnt/sftponlyha'
 target_dir = '/mnt/sftponly_netapp'
+customer_list_file = '/root/customer_list'
 
 today = datetime.date.today()
-# yesterday = datetime.date.fromordinal( today.toordinal() - 2 ).strftime("%F")
-# yesterday = '2017-05-30'
 
 dict_syncing = {'reports' : 'reports', 
 		'logs' : 'logs',
@@ -38,67 +37,65 @@ dict_syncing = {'reports' : 'reports',
 		'customized_reports' : 'reports/customized_rpt', 
 		'mrma_reports' : 'reports/mrma' }
 
-def syncing_folders(type, path):
-	origin_function_dir = os.path.join(origin_dir, network, path, p_date)
-	target_function_dir = os.path.join(target_dir, network, path, p_date)
-	if os.path.isdir( origin_function_dir ):
-		start_time = datetime.datetime.now()
-		if os.path.isdir( target_function_dir ):
-		        origin_function_dir = origin_function_dir + '/'
-		        target_function_dir = target_function_dir + '/'
-		        cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (origin_function_dir, target_function_dir)
-		        os.system( cmd )
-			end_time = datetime.datetime.now()
-			duration = (end_time - start_time).seconds
-		        print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
-			return 1
-		else:
-		        target_function_dir = os.path.join(target_dir, network, path)
-		        cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (origin_function_dir, target_function_dir)
-		        os.system( cmd )
-			end_time = datetime.datetime.now()
-			duration = (end_time - start_time).seconds
-		        print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
-			return 2
-	else:
-        	print "\tno " + type + " were found for " + p_date
-		return 3
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
-def syncing_non_dated_folders(type, path):
-	origin_function_dir = os.path.join(origin_dir, network, path)
-	target_function_dir = os.path.join(target_dir, network, path)
-	if os.path.isdir( origin_function_dir ):
-		start_time = datetime.datetime.now()
-		if os.path.isdir( target_function_dir ):
-		        origin_function_dir = origin_function_dir + '/'
-		        target_function_dir = target_function_dir + '/'
-		        cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (origin_function_dir, target_function_dir)
-		        os.system( cmd )
-			end_time = datetime.datetime.now()
-			duration = (end_time - start_time).seconds
-		        print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
-			return 1
-		else:
-		        target_function_dir = os.path.join(target_dir, network, path)
-		        cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (origin_function_dir, target_function_dir)
-		        os.system( cmd )
-			end_time = datetime.datetime.now()
-			duration = (end_time - start_time).seconds
-		        print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
-			return 2
-	else:
-        	print "\tno " + type + " were found for " + p_date
-		return 3
+def mirror_path(path):
+        origin_path_info = os.stat(os.path.join(origin_dir, path))
+        os.mkdir(os.path.join(target_dir, path))
+        os.chmod(os.path.join(target_dir, path), int(oct(origin_path_info.st_mode) ,8))
+        os.chown(os.path.join(target_dir, path), origin_path_info.st_uid, origin_path_info.st_gid)
+
+def get_relative_path(path):
+        path_list = path.split('/')
+        for i in range(3, len(path_list)):
+                if i == 3:
+                        relative_path = path_list[i]
+                else:
+                        relative_path = relative_path + '/' + path_list[i]
+        return relative_path
+
+def sync_folder(path, type):
+        start_time = datetime.datetime.now()
+        source_path = os.path.join(origin_dir, path)
+        target_path = os.path.join(target_dir, path)
+        if os.path.isdir(source_path):
+                source_path += '/'
+                target_path += '/'
+                cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (source_path, target_path)
+                os.system(cmd)
+                end_time = datetime.datetime.now()
+                duration = (end_time - start_time).seconds
+                print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
+        else:
+                print "\t" + bcolors.FAIL + "no " + type + " were found for " + p_date + bcolors.ENDC
+
+def sync_date_folders(path, type):
+	source_abs_path = os.path.join(origin_dir, network, path, p_date)
+	rel_path = get_relative_path(source_abs_path)
+	sync_folder(rel_path, type)
+
+def sync_non_dated_folders(path, type):
+	source_abs_path = os.path.join(origin_dir, network, path)
+	rel_path = get_relative_path(source_abs_path)
+	sync_folder(rel_path, type)
 
 def process_network(p_network):
-	print "Network: %s" % (p_network)
+	print bcolors.OKBLUE + "Network: " + p_network + bcolors.ENDC
 	for i in dict_syncing:
 		if i in ['customized_reports', 'mrma_reports']:
-			syncing_non_dated_folders(i, dict_syncing[i])
+			sync_non_dated_folders(dict_syncing[i], i)
 		else:
-			syncing_folders(i, dict_syncing[i])
+			sync_date_folders(dict_syncing[i], i)
 
-network_file = open('/root/network_list', 'r')
+network_file = open(customer_list_file, 'r')
 network_list = network_file.read().splitlines()
 network_file.close()
 
@@ -106,7 +103,6 @@ for network in network_list:
 	process_network(network) 
 
 message = message_header + p_date + ' files are finished at ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
 smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
 smtpObj.sendmail(sender, receivers, message)
 smtpObj.quit()
