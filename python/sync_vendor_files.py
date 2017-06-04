@@ -120,3 +120,9 @@ for line in vendor_line:
 #		sync_reports_full(line.split(':')[0], type)
 	if type == 'customized_reports':
 		sync_customized_reports(line.split(':')[0], type)
+
+message = message_header + p_date + ' files are finished at ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
+smtpObj.sendmail(sender, receivers, message)
+smtpObj.quit()
+print "Successfully sent email"
