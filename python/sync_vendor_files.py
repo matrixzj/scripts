@@ -44,8 +44,9 @@ def sync_folder(path, type):
 	if os.path.isdir(source_path):
 		source_path += '/'
 		target_path += '/'
-		cmd = "rsync -arq --delete-after --bwlimit=20000 %s %s" % (source_path, target_path)
+		cmd = "rsync -arv --delete-after --bwlimit=20000 %s %s" % (source_path, target_path)
 		print cmd
+		os.system(cmd)
 		end_time = datetime.datetime.now()
 		duration = (end_time - start_time).seconds
 		print "\t%s syncing was started at %s, ended at %s, taken %s seconds" % (type, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), duration)
@@ -108,21 +109,15 @@ vendor_file.close
 for line in vendor_line:
 	type = line.split(':')[1] 
 	print bcolors.OKBLUE + line.split(':')[0] + ' (' + type + ')'+ bcolors.ENDC
-#	if type in ['reports', 'logs']:
-#		sync_reports_logs(line.split(':')[0], type)
-#	if type == 'logs-hourly':
-#		sync_log_hourly(line.split(':')[0], type)
-#	if type == 'full':
-#		sync_folder(line.split(':')[0], type)
-#	if type == 'customized_rpt':
-#		sync_customized_rpt(line.split(':')[0], type)
-#	if type == 'reports_full':
-#		sync_reports_full(line.split(':')[0], type)
+	if type in ['reports', 'logs']:
+		sync_reports_logs(line.split(':')[0], type)
+	if type == 'logs-hourly':
+		sync_log_hourly(line.split(':')[0], type)
+	if type == 'full':
+		sync_folder(line.split(':')[0], type)
+	if type == 'customized_rpt':
+		sync_customized_rpt(line.split(':')[0], type)
+	if type == 'reports_full':
+		sync_reports_full(line.split(':')[0], type)
 	if type == 'customized_reports':
 		sync_customized_reports(line.split(':')[0], type)
-
-message = message_header + p_date + ' files are finished at ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
-smtpObj.sendmail(sender, receivers, message)
-smtpObj.quit()
-print "Successfully sent email"

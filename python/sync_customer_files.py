@@ -22,20 +22,34 @@ customer_list_file = '/root/customer_list'
 
 today = datetime.date.today()
 
-dict_syncing = {'reports' : 'reports', 
-		'logs' : 'logs',
-		'bvi_archive' : 'files/bvi/archive', 
-		'bvi_completed' : 'files/bvi/completed', 
+dict_sync = {	'ssh-keys' : '.ssh',
+		'companion-files' : 'companion-files',
+		'audience_completed' : 'files/audience/ingest/completed',
+		'bvi_completed' : 'files/bvi/completed',
 		'bvi_failed' : 'files/bvi/failed',
 		'bvi_log' : 'files/bvi/log',
 		'bvi_long_tail' : 'files/bvi/long_tail',
-		'fast_bvi_archive' : 'files/fast_bvi/archive', 
 		'fast_bvi_completed' : 'files/fast_bvi/completed', 
-		'fast_bvi_log' : 'files/fast_bvi/log',
 		'fast_bvi_failed' : 'files/fast_bvi/failed',
-		'audience_ingest_completed' : 'files/audience/ingest/completed',
-		'customized_reports' : 'reports/customized_rpt', 
-		'mrma_reports' : 'reports/mrma' }
+		'fast_bvi_log' : 'files/fast_bvi/log',
+		'logs' : 'logs',
+		'reports' : 'reports', 
+		'reports_audience' : 'reports/audience',
+		'reports_customized' : 'reports/customized_rpt',
+		'reports_mrma' : 'reports/mrma',
+		'v4logs' : 'v4logs'}
+
+dict_not_sync = {	'audience_failed' : 'files/audience/ingest/failed',
+			'bvi_archive' : 'files/bvi/archive',
+			'fast_bvi_archive' : 'files/fast_bvi/archive', 
+			'hylda' : 'files/hylda'}
+
+dict_final_sync = {	'audience_pending' : 'files/audience/ingest/pending',
+			'audience_processing' : 'files/audience/ingest/processing',
+			'bvi_pending' : 'files/bvi/pending', 
+			'bvi_processing' : 'files/bvi/processing',
+			'fast_bvi_pending' : 'files/fast_bvi/pending',
+			'fast_bvi_processing' : 'files/fast_bvi/processing'}
 
 class bcolors:
     HEADER = '\033[95m'
