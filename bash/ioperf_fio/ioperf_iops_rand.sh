@@ -1,6 +1,6 @@
 #! /bin/bash
 # From Matrix Zou for NFS/GlusterFS Benchmark (randwrite/randread)
-# Maintainer    : jzou@freewheel.tv
+# Maintainer    : matrix.zj@gmail.com
 # Version       : "0.2-20160405"
 #
 # $1 = IO performace Benchmark IO Pattern (randrw, randread, randwrite)

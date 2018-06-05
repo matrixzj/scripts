@@ -1,6 +1,6 @@
 #! /bin/bash
 # From Matrix Zou for keep submit a directory to Git
-# Maintainer    : Matrix Zou<jzou@freewheel.tv>
+# Maintainer    : Matrix Zou<matrix.zj@gmail.com>
 # Version       : "0.2-20160804"
 #
 # ChangeLog     :

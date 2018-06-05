@@ -1,6 +1,6 @@
 #! /bin/bash
 # From Matrix Zou for Repo Sync
-# Maintainer    : jzou@freewheel.tv
+# Maintainer    : matrix.zj@gmail.com
 # Version       : "0.4-20170416"
 #
 #  04/18/2016 Matrix	enable multithreads

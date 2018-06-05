@@ -1,6 +1,6 @@
 #! /bin/bash
 # From Matrix Zou for zabbix agent installation
-# Maintainer    : jzou@freewheel.tv
+# Maintainer    : matrix.zj@gmail.com
 # Version       : "0.1-20160621"
 #
 # $1 = ip address

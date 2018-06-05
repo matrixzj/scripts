@@ -8,10 +8,10 @@ import datetime
 import shutil
 import smtplib
 
-sender = 'root@nycnfs202.fwmrm.net'
-receivers = ['jzou@freewheel.tv']
-message_header = """From: From root <root@nycnfs202.fwmrm.net>
-To: To jzou <jzou@freewheel.tv>
+sender = 'root@'
+receivers = ['matrix.zj@gmail.com']
+message_header = """From: From root <root@>
+To: To jzou <matrix.zj@gmail.com>
 Subject: file syncing was finished
 """
 
@@ -202,7 +202,7 @@ for customer in customer_line:
 
 migration_date_str = time.strftime('%Y%m%d', migration_date)
 message = message_header + migration_date_str + ' files are finished at ' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-smtpObj = smtplib.SMTP('smtp.fwmrm.net', 25)
+smtpObj = smtplib.SMTP('smtp.test.net', 25)
 smtpObj.sendmail(sender, receivers, message)
 smtpObj.quit()
 print "Successfully sent email"
